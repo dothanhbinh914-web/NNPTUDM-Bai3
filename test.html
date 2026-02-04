@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Products Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      * { box-sizing: border-box; }
+      body { background: #0b0b0b; min-height: 100vh; padding: 20px 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #ffffff; }
+
+      /* Keep container light so content is readable on dark page */
+      .container-main { background: white; color: #0b0b0b; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.12); padding: 24px; margin: 0 auto; max-width: 1100px; }
+      .header { text-align: left; margin-bottom: 18px; }
+      .header h1 { color: #111827; font-weight: 700; font-size: 1.6rem; margin-bottom: 0; }
+      .header p { color: #6b7280; margin-top: 4px; }
+
+      .controls-section { display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:14px; }
+      .search-container { position: relative; flex:1; max-width:480px; }
+      .search-container input { border: 2px solid #ffffff; border-radius: 8px; padding: 10px 12px 10px 40px; width:100%; background: #fff; color: #0b0b0b; }
+      .search-container i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#0d6efd; }
+
+      .action-buttons { display:flex; gap:8px; align-items:center; }
+      .btn-create { background: linear-gradient(135deg,#0d6efd,#0b0b0b); color:#fff; border-radius:8px; padding:8px 14px; border:none; }
+      .btn-export { background:#dc3545; color:#fff; border-radius:8px; padding:8px 12px; border:none; }
+      .btn-small { border-radius:6px; padding:6px 10px; border:1px solid #ffffff; background:#fff; }
+      .pagination-top { display:flex; gap:12px; align-items:center; margin:12px 0 10px; }
+      .pagination-top label { font-weight:600; color:#333; }
+      .pagination-top select { padding:8px 12px; border:2px solid #ffffff; border-radius:6px; background:#fff; }
+
+      .table-container { overflow-x:auto; border-radius:8px; box-shadow: 0 6px 18px rgba(0,0,0,0.07); }
+      .table { width:100%; border-collapse:collapse; margin-bottom:0; }
+      .table thead { background: linear-gradient(135deg,#667eea,#764ba2); color:#fff; }
+      .table thead th { padding:14px; font-weight:700; border:none; text-align:center; }
+      .table tbody tr { border-bottom:1px solid #eef2ff; transition:all .15s ease; cursor:pointer; }
+      .table tbody tr:hover { background:#f8fafc; }
+      .table tbody td { padding:12px; vertical-align:middle; text-align:center; }
+
+      .id-cell { font-weight:700; color:#667eea; }
+      .title-cell { text-align:left; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .price-cell { color:#28a745; font-weight:700; }
+      .category-cell { display:inline-block; background:#f3f4f6; padding:6px 10px; border-radius:20px; color:#374151; }
+      .image-cell img { max-width:96px; max-height:64px; object-fit:cover; border-radius:6px; }
+
+      .modal-header { background: linear-gradient(135deg,#667eea,#764ba2); color:#fff; }
+      /* Modal title color override for Create and Edit modals */
+      #productModal .modal-header .modal-title,
+      #createModal .modal-header .modal-title { color: #0b0b0b !important; }
+
+      /* Form labels and inputs inside Create/Edit modals should be black for readability */
+      #createModal .modal-body .form-label,
+      #productModal .modal-body .form-label { color: #0b0b0b; font-weight:700; }
+      #createModal .modal-body input,
+      #createModal .modal-body textarea,
+      #productModal .modal-body input,
+      #productModal .modal-body textarea { color: #0b0b0b; }
+
+      .modal-body img { max-width:100%; height:auto; border-radius:8px; }
+
+      .tooltip-custom { position:relative; display:inline-block; }
+      .description-row { position:relative; }
+
+      /* list view shrink-to-fit rows (left aligned) */
+      .list-group { display:flex; flex-direction:column; align-items:flex-start; gap:0.5rem; margin:0; align-self:flex-start; }
+      .table-thumb { width:64px; height:64px; object-fit:cover; border-radius:6px; }
+
+      /* Rows will shrink to fit their content on desktop */
+      .list-group-item { display:inline-flex; width:auto; padding:0.5rem 0.6rem; align-items:center; gap:0.6rem; border-radius:6px; white-space:nowrap; }
+      .list-group-item .flex-grow-1 { flex: 0 0 auto; max-width: none; overflow: hidden; text-overflow: ellipsis; }
+      .list-group-item .text-truncate { max-width: 260px; }
+
+      /* On smaller screens make rows full width for readability */
+      @media (max-width:768px){
+        .controls-section{flex-direction:column;align-items:stretch;} 
+        .container-main{padding:18px;} 
+        .title-cell{max-width:140px;} 
+        .list-group { align-items:stretch; }
+        .list-group-item { display:flex; width:100%; white-space:normal; flex-wrap:wrap; }
+        .list-group-item .flex-grow-1 { flex: 1 1 auto; max-width:100%; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-main">
+      <div class="header">
+        <h1><i class="bi bi-shop"></i> Products Dashboard</h1>
+        <p>Quản lý sản phẩm — tìm, sửa, tạo và xuất dữ liệu.</p>
+      </div>
+
+      <div id="alertPlaceholder"></div>
+
+      <div class="controls-section">
+        <div class="search-container">
+          <i class="bi bi-search"></i>
+          <input id="searchInput" class="form-control" placeholder="Tìm theo title..." />
+        </div>
+        <div class="action-buttons">
+          <select id="perPageSelect" class="form-select form-select-sm" style="width:100px;">
+            <option value="5">5 / trang</option>
+            <option value="10" selected>10 / trang</option>
+            <option value="20">20 / trang</option>
+          </select>
+
+          <button id="sortTitleBtn" class="btn-small" title="Sắp xếp theo title">Title</button>
+          <button id="sortPriceBtn" class="btn-small" title="Sắp xếp theo giá">Price</button>
+
+          <button id="exportCsvBtn" class="btn-export"><i class="bi bi-download"></i> Export</button>
+          <button id="toggleViewBtn" class="btn-small" title="Chuyển bảng/gird">Bảng</button>
+          <button id="createBtn" class="btn-create"><i class="bi bi-plus-circle"></i> Tạo</button>
+        </div>
+      </div>
+
+      <div class="pagination-top">
+        <label for="perPageSelect">Hiển thị:</label>
+        <!-- perPageSelect already present in controls -->
+        <span id="recordCount" style="margin-left:auto;color:#666;font-weight:500;">Đang tải...</span>
+      </div>
+
+      <div id="tableView" class="table-responsive mt-3" style="display:none">
+        <table class="table table-striped table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th data-sort="id" class="sortable">ID</th>
+              <th>Ảnh</th>
+              <th data-sort="title" class="sortable">Title</th>
+              <th data-sort="price" class="sortable">Price</th>
+              <th data-sort="category" class="sortable">Category</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="productsTableBody"></tbody>
+        </table>
+      </div>
+
+      <div id="loader" class="text-center my-5">
+        <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
+      </div>
+
+      <div id="productsGrid" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3"></div>
+
+      <nav class="mt-4" aria-label="Pagination">
+        <ul id="pagination" class="pagination justify-content-center"></ul>
+      </nav>
+    </div>
+
+    <!-- Product Detail Modal -->
+    <div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 id="modalTitle" class="modal-title"></h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-5">
+                <img id="modalImage" src="" class="img-fluid" alt="product image" />
+              </div>
+              <div class="col-md-7">
+                <h4 id="modalPrice" class="text-success"></h4>
+                <p id="modalDescription"></p>
+                <p class="mb-0"><strong>Category:</strong> <span id="modalCategory"></span></p>
+                <p class="mb-0"><strong>Rating:</strong> <span id="modalRating"></span></p>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="editBtn" class="btn btn-outline-primary">Edit</button>
+            <button id="saveBtn" class="btn btn-primary" style="display:none">Save</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div> 
+      </div>
+    </div>
+
+    <!-- Create Item Modal -->
+    <div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Tạo sản phẩm mới</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form id="createForm">
+              <div class="mb-2">
+                <label class="form-label">Title</label>
+                <input name="title" class="form-control" required />
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Price</label>
+                <input name="price" type="number" step="0.01" class="form-control" required />
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Description</label>
+                <textarea name="description" class="form-control" rows="3"></textarea>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Image URL</label>
+                <input name="image" class="form-control" />
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Category ID</label>
+                <input name="categoryId" type="number" class="form-control" value="1" />
+              </div>
+              <div class="text-end">
+                <button class="btn btn-primary">Create</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
